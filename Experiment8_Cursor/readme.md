@@ -6,7 +6,7 @@ To write and execute PL/SQL programs using cursors and exception handling to man
 ## THEORY
 
 In PL/SQL, cursors are used to handle query result sets row-by-row. 
-
+ 
 There are two types of cursors:
 
 - Implicit Cursors: Automatically created by PL/SQL for single-row queries.
@@ -69,49 +69,49 @@ END;
 1. **NO_DATA_FOUND**: When no rows are fetched.
 2. **OTHERS**: Any other unexpected errors during execution.
 
-## PROGRAM
-```
+**Steps:**
+
+- Create an `employees` table with fields `emp_id`, `emp_name`, and `designation`.
+- Insert some sample data into the table.
+- Use a simple cursor to fetch and display employee names and designations.
+- Implement exception handling to catch the relevant exceptions and display appropriate messages.
+
+**Program:**
+```sql
+SET SERVEROUTPUT ON;
+
 DECLARE
-   -- Simple cursor declaration
-   CURSOR emp_cursor IS
-      SELECT emp_name, designation FROM employees;
+    CURSOR emp_cursor IS
+        SELECT emp_name, designation FROM employees;
 
-   -- Variables to hold fetched data
-   v_emp_name    employees.emp_name%TYPE;
-   v_designation employees.designation%TYPE;
+    v_name employees.emp_name%TYPE;
+    v_desig employees.designation%TYPE;
 
-   -- Flag to check if data was fetched
-   v_found BOOLEAN := FALSE;
-
+    no_data BOOLEAN := TRUE;
 BEGIN
-   OPEN emp_cursor;
+    OPEN emp_cursor;
+    LOOP
+        FETCH emp_cursor INTO v_name, v_desig;
+        EXIT WHEN emp_cursor%NOTFOUND;
 
-   LOOP
-      FETCH emp_cursor INTO v_emp_name, v_designation;
-      EXIT WHEN emp_cursor%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE('Name: ' || v_name || ', Designation: ' || v_desig);
+        no_data := FALSE;
+    END LOOP;
+    CLOSE emp_cursor;
 
-      v_found := TRUE;  -- At least one record fetched
-      DBMS_OUTPUT.PUT_LINE('Name: ' || v_emp_name || ', Designation: ' || v_designation);
-   END LOOP;
-
-   CLOSE emp_cursor;
-
-   -- Raise exception if no data was fetched
-   IF NOT v_found THEN
-      RAISE NO_DATA_FOUND;
-   END IF;
+    IF no_data THEN
+        RAISE NO_DATA_FOUND;
+    END IF;
 
 EXCEPTION
-   WHEN NO_DATA_FOUND THEN
-      DBMS_OUTPUT.PUT_LINE('No employee records found.');
-   WHEN OTHERS THEN
-      DBMS_OUTPUT.PUT_LINE('An unexpected error occurred: ' || SQLERRM);
+    WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('No employee records found.');
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Unexpected error: ' || SQLERRM);
 END;
 ```
-
 **Output:**  
-
-![image](https://github.com/user-attachments/assets/1df46f5a-7b0b-4253-b260-4f5295f5bff8)
+![image](https://github.com/user-attachments/assets/48f3a61e-9ca4-439e-9818-d640fcb5484e)
 
 ---
 
@@ -122,56 +122,54 @@ END;
 1. **NO_DATA_FOUND**: When no employees meet the salary criteria.
 2. **OTHERS**: For any unexpected errors during the execution.
 
-## PROGRAM
-```
+**Steps:**
+
+- Modify the `employees` table by adding a `salary` column.
+- Insert sample salary values for the employees.
+- Use a parameterized cursor to accept a salary range as input and fetch employees within that range.
+- Implement exception handling to catch and display relevant error messages.
+
+**Program:**
+```sql
+SET SERVEROUTPUT ON;
+
 DECLARE
-   -- Input salary range
-   v_min_salary NUMBER := 55000;
-   v_max_salary NUMBER := 80000;
+    CURSOR emp_cursor(min_sal NUMBER, max_sal NUMBER) IS
+        SELECT emp_name, salary FROM employees
+        WHERE salary BETWEEN min_sal AND max_sal;
 
-   -- Parameterized cursor
-   CURSOR emp_cursor(p_min NUMBER, p_max NUMBER) IS
-      SELECT emp_name, designation, salary
-      FROM employees
-      WHERE salary BETWEEN p_min AND p_max;
+    v_name employees.emp_name%TYPE;
+    v_salary employees.salary%TYPE;
 
-   -- Variables to hold fetched data
-   v_name        employees.emp_name%TYPE;
-   v_designation employees.designation%TYPE;
-   v_salary      employees.salary%TYPE;
+    v_min NUMBER := 50000;
+    v_max NUMBER := 70000;
 
-   -- Flag to detect if any rows are found
-   v_found BOOLEAN := FALSE;
-
+    no_data BOOLEAN := TRUE;
 BEGIN
-   OPEN emp_cursor(v_min_salary, v_max_salary);
+    OPEN emp_cursor(v_min, v_max);
+    LOOP
+        FETCH emp_cursor INTO v_name, v_salary;
+        EXIT WHEN emp_cursor%NOTFOUND;
 
-   LOOP
-      FETCH emp_cursor INTO v_name, v_designation, v_salary;
-      EXIT WHEN emp_cursor%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE('Name: ' || v_name || ', Salary: ' || v_salary);
+        no_data := FALSE;
+    END LOOP;
+    CLOSE emp_cursor;
 
-      v_found := TRUE;
-      DBMS_OUTPUT.PUT_LINE('Name: ' || v_name || ', Designation: ' || v_designation || ', Salary: ' || v_salary);
-   END LOOP;
-
-   CLOSE emp_cursor;
-
-   IF NOT v_found THEN
-      RAISE NO_DATA_FOUND;
-   END IF;
+    IF no_data THEN
+        RAISE NO_DATA_FOUND;
+    END IF;
 
 EXCEPTION
-   WHEN NO_DATA_FOUND THEN
-      DBMS_OUTPUT.PUT_LINE('No employees found in the salary range.');
-
-   WHEN OTHERS THEN
-      DBMS_OUTPUT.PUT_LINE('An error occurred: ' || SQLERRM);
+    WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('No employees found in the given salary range.');
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Unexpected error: ' || SQLERRM);
 END;
 ```
 
 **Output:**  
-
-![image](https://github.com/user-attachments/assets/87ec1625-4303-4c92-9e70-91479437d731)
+![image](https://github.com/user-attachments/assets/ecbc9b27-679f-49ae-b57d-1228b04597cb)
 
 ---
 
@@ -182,37 +180,38 @@ END;
 1. **NO_DATA_FOUND**: If no employees are found in the database.
 2. **OTHERS**: For any other unexpected errors.
 
-## PROGRAM
-```
-DECLARE
-   -- Flag to check if any row is found
-   v_found BOOLEAN := FALSE;
-BEGIN
-   -- Cursor FOR loop directly iterates over result set
-   FOR emp_rec IN (
-      SELECT emp_name, dept_no FROM employees
-   ) LOOP
-      v_found := TRUE;
-      DBMS_OUTPUT.PUT_LINE('Name: ' || emp_rec.emp_name || ', Dept No: ' || emp_rec.dept_no);
-   END LOOP;
+**Steps:**
 
-   -- If no rows were fetched, raise NO_DATA_FOUND manually
-   IF NOT v_found THEN
-      RAISE NO_DATA_FOUND;
-   END IF;
+- Modify the `employees` table by adding a `dept_no` column.
+- Insert sample department numbers for employees.
+- Use a cursor FOR loop to fetch and display employee names along with their department numbers.
+- Implement exception handling to catch the relevant exceptions.
+**Program:**
+```sql
+SET SERVEROUTPUT ON;
+
+DECLARE
+    no_data BOOLEAN := TRUE;
+BEGIN
+    FOR emp_rec IN (SELECT emp_name, dept_no FROM employees) LOOP
+        DBMS_OUTPUT.PUT_LINE('Employee: ' || emp_rec.emp_name || ', Dept No: ' || emp_rec.dept_no);
+        no_data := FALSE;
+    END LOOP;
+
+    IF no_data THEN
+        RAISE NO_DATA_FOUND;
+    END IF;
 
 EXCEPTION
-   WHEN NO_DATA_FOUND THEN
-      DBMS_OUTPUT.PUT_LINE('No employee records found.');
-
-   WHEN OTHERS THEN
-      DBMS_OUTPUT.PUT_LINE('An unexpected error occurred: ' || SQLERRM);
+    WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('No employees found in the database.');
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Unexpected error: ' || SQLERRM);
 END;
+
 ```
-
 **Output:**  
-
-![image](https://github.com/user-attachments/assets/444dfe98-5c17-4076-946f-c0fb4eb611ae)
+![image](https://github.com/user-attachments/assets/d3b560be-2a7b-433e-af6b-98f81e3c81cb)
 
 ---
 
@@ -223,53 +222,53 @@ END;
 1. **NO_DATA_FOUND**: When no employees are found in the database.
 2. **OTHERS**: For any other errors that occur.
 
-## PROGRAM
-```
+**Steps:**
+
+- Modify the `employees` table by adding `emp_id`, `emp_name`, `designation`, and `salary` fields.
+- Insert sample data into the `employees` table.
+- Declare a cursor using `%ROWTYPE` to fetch complete rows from the `employees` table.
+- Implement exception handling to catch the relevant exceptions and display appropriate messages.
+
+ **Program:**
+```sql
+SET SERVEROUTPUT ON;
+
 DECLARE
-   -- Cursor to fetch all records
-   CURSOR emp_cursor IS
-      SELECT * FROM employees;
+    CURSOR emp_cursor IS
+        SELECT emp_id, emp_name, designation, salary FROM employees;
 
-   -- Record variable using %ROWTYPE
-   emp_record employees%ROWTYPE;
+    emp_record emp_cursor%ROWTYPE;
 
-   -- Flag to check if data was found
-   v_found BOOLEAN := FALSE;
-
+    no_data BOOLEAN := TRUE;
 BEGIN
-   OPEN emp_cursor;
+    OPEN emp_cursor;
+    LOOP
+        FETCH emp_cursor INTO emp_record;
+        EXIT WHEN emp_cursor%NOTFOUND;
 
-   LOOP
-      FETCH emp_cursor INTO emp_record;
-      EXIT WHEN emp_cursor%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE('ID: ' || emp_record.emp_id ||
+                             ', Name: ' || emp_record.emp_name ||
+                             ', Designation: ' || emp_record.designation ||
+                             ', Salary: ' || emp_record.salary);
 
-      v_found := TRUE;
+        no_data := FALSE;
+    END LOOP;
+    CLOSE emp_cursor;
 
-      DBMS_OUTPUT.PUT_LINE(
-         'ID: ' || emp_record.emp_id || 
-         ', Name: ' || emp_record.emp_name || 
-         ', Designation: ' || emp_record.designation || 
-         ', Salary: ' || emp_record.salary
-      );
-   END LOOP;
-
-   CLOSE emp_cursor;
-
-   -- Check if no data was found
-   IF NOT v_found THEN
-      RAISE NO_DATA_FOUND;
-   END IF;
+    IF no_data THEN
+        RAISE NO_DATA_FOUND;
+    END IF;
 
 EXCEPTION
-   WHEN NO_DATA_FOUND THEN
-      DBMS_OUTPUT.PUT_LINE('No employee records found.');
-   WHEN OTHERS THEN
-      DBMS_OUTPUT.PUT_LINE('An unexpected error occurred: ' || SQLERRM);
+    WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('No employee records found.');
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Unexpected error: ' || SQLERRM);
 END;
+
 ```
 **Output:**  
-
-![image](https://github.com/user-attachments/assets/fe27162c-aa73-4ae7-9ae3-fd958e2c7cab)
+![image](https://github.com/user-attachments/assets/66d13cfb-0bfd-4263-8bc5-b866e2912492)
 
 ---
 
@@ -280,52 +279,51 @@ END;
 1. **NO_DATA_FOUND**: If no rows are affected by the update.
 2. **OTHERS**: For any unexpected errors during execution.
 
-## PROGRAM
-```
+**Steps:**
+
+- Modify the `employees` table to include a `dept_no` and `salary` field.
+- Insert sample data into the `employees` table with different department numbers.
+- Use a cursor with the `FOR UPDATE` clause to lock the rows of employees in a specific department and update their salary.
+- Implement exception handling to handle `NO_DATA_FOUND` or other errors that may occur.
+
+**Program:**
+```sql
+SET SERVEROUTPUT ON;
 
 DECLARE
-   -- Target department and increment
-   v_dept_no   NUMBER := 10;
-   v_increment NUMBER := 1000;
-   v_found     BOOLEAN := FALSE;
-
-   -- Cursor to select employees for update
-   CURSOR emp_cursor IS
-      SELECT emp_id, salary
-      FROM employees
-      WHERE dept_no = v_dept_no
-      FOR UPDATE;
-
+    CURSOR emp_cursor (p_dept_no NUMBER) IS
+        SELECT emp_id, emp_name, salary
+        FROM employees
+        WHERE dept_no = p_dept_no
+        FOR UPDATE OF salary;
+        
+    v_rows_updated NUMBER := 0;
 BEGIN
-   FOR emp_rec IN emp_cursor LOOP
-      v_found := TRUE;
-
-      -- Update salary
-      UPDATE employees
-      SET salary = emp_rec.salary + v_increment
-      WHERE emp_id = emp_rec.emp_id;
-
-      DBMS_OUTPUT.PUT_LINE('Updated salary for Employee ID: ' || emp_rec.emp_id);
-   END LOOP;
-
-   IF NOT v_found THEN
-      RAISE NO_DATA_FOUND;
-   END IF;
-
-   COMMIT;
-
+    FOR emp_rec IN emp_cursor(10) LOOP
+        UPDATE employees
+        SET salary = salary * 1.10
+        WHERE CURRENT OF emp_cursor;
+        
+        v_rows_updated := v_rows_updated + 1;
+    END LOOP;
+    
+    IF v_rows_updated = 0 THEN
+        RAISE NO_DATA_FOUND;
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('Salaries updated for ' || v_rows_updated || ' employees in department 10.');
+    END IF;
+    
 EXCEPTION
-   WHEN NO_DATA_FOUND THEN
-      DBMS_OUTPUT.PUT_LINE('No employees found in department ' || v_dept_no || '.');
-
-   WHEN OTHERS THEN
-      DBMS_OUTPUT.PUT_LINE('An unexpected error occurred: ' || SQLERRM);
+    WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('No employees found in the specified department.');
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('An unexpected error occurred: ' || SQLERRM);
 END;
+/
 ```
 
 **Output:**  
-
-![image](https://github.com/user-attachments/assets/3144ad25-94d7-4328-a5be-b9cdce6a4a2d)
+![image](https://github.com/user-attachments/assets/4828c843-7a64-4c9f-bfa5-90674b214862)
 
 ---
 
